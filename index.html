@@ -1,0 +1,379 @@
+<!doctype html>
+<html lang="en-GB">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
+<meta name="apple-mobile-web-app-capable" content="yes">
+<meta name="theme-color" content="#F3F8F6">
+<title>Algebra Playground</title>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Fredoka:wght@500;600;700&family=Nunito:wght@500;700&display=swap">
+<style>
+/* Layout: one lesson on screen at a time, a chip rail on top, big tap targets for an iPad. */
+:root{
+  --bg:#F3F8F6; --card:#FFFFFF; --fg:#17312C; --muted:#5E7A74;
+  --accent:#FF6A45; --teal:#1F9E8C; --sun:#FFD166; --sun-ink:#5A4300;
+  --line:#D6E4E0; --good:#1F9E8C; --bad:#D9483B;
+  --display:'Fredoka',system-ui,sans-serif; --body:'Nunito',system-ui,sans-serif;
+}
+@media (prefers-color-scheme:dark){ :root:not([data-theme="light"]){
+  --bg:#0F1F1C; --card:#183230; --fg:#EAF4F1; --muted:#9DB8B1; --accent:#FF8A6A; --teal:#3CC3AF;
+  --sun:#FFD166; --sun-ink:#3A2B00; --line:#2B4743; --good:#3CC3AF; --bad:#FF7A6E; color-scheme:dark } }
+:root[data-theme="dark"]{
+  --bg:#0F1F1C; --card:#183230; --fg:#EAF4F1; --muted:#9DB8B1; --accent:#FF8A6A; --teal:#3CC3AF;
+  --sun:#FFD166; --sun-ink:#3A2B00; --line:#2B4743; --good:#3CC3AF; --bad:#FF7A6E; color-scheme:dark }
+
+*{box-sizing:border-box}
+body{background:var(--bg);color:var(--fg);font-family:var(--body);font-size:18px;line-height:1.5;
+  padding-left:max(16px,env(safe-area-inset-left,0px));padding-right:max(16px,env(safe-area-inset-right,0px));padding-block:12px 40px}
+.wrap{max-width:760px;margin:0 auto}
+h1{font-family:var(--display);font-weight:700;font-size:2rem;margin:8px 0 2px;text-wrap:balance}
+.sub{color:var(--muted);margin:0 0 14px}
+h2{font-family:var(--display);font-weight:600;font-size:1.5rem;margin:0 0 6px;text-wrap:balance}
+p{margin:0 0 12px;max-width:62ch}
+.rail{display:flex;gap:8px;overflow-x:auto;padding-bottom:6px;margin-bottom:14px;scrollbar-width:none}
+.rail::-webkit-scrollbar{display:none}
+.chip{flex:0 0 auto;border:2px solid var(--line);background:var(--card);color:var(--fg);border-radius:999px;padding:8px 14px;
+  font:600 15px var(--display);cursor:pointer}
+.chip[aria-current="true"]{background:var(--accent);border-color:var(--accent);color:#fff}
+.lesson{display:none}.lesson.on{display:block}
+.card{background:var(--card);border:2px solid var(--line);border-radius:18px;padding:18px;margin:14px 0}
+.card.sun{background:var(--sun);color:var(--sun-ink);border-color:transparent}
+.card.sun p{color:inherit}
+.label{font:600 13px var(--display);letter-spacing:.08em;text-transform:uppercase;color:var(--muted);margin-bottom:8px}
+.card.sun .label{color:inherit;opacity:.8}
+.expr{font-family:var(--display);font-size:1.9rem;display:flex;flex-wrap:wrap;gap:6px;align-items:center;min-height:52px}
+.term{display:inline-block;padding:4px 10px;border-radius:12px;border:2px solid transparent;cursor:pointer;user-select:none;transition:transform .15s,background .15s}
+.term:active{transform:scale(.95)}
+.term.hl{background:var(--sun);color:var(--sun-ink)}
+.term.fam-a{background:color-mix(in srgb,var(--teal) 22%,transparent);border-color:var(--teal)}
+.term.fam-b{background:color-mix(in srgb,var(--accent) 22%,transparent);border-color:var(--accent)}
+.term.fam-c{background:color-mix(in srgb,var(--sun) 60%,transparent);border-color:var(--sun)}
+.term.off{opacity:.35}
+.btn{font:600 16px var(--display);border:0;border-radius:12px;padding:10px 16px;cursor:pointer;background:var(--teal);color:#fff}
+.btn.alt{background:var(--card);color:var(--fg);border:2px solid var(--line)}
+.btn.warm{background:var(--accent)}
+.btn:focus-visible,.chip:focus-visible,.term:focus-visible{outline:3px solid var(--sun);outline-offset:2px}
+.row{display:flex;flex-wrap:wrap;gap:10px;align-items:center;margin-top:12px}
+.result{font-family:var(--display);font-size:1.6rem;margin-top:12px;min-height:40px}
+.steps{display:flex;flex-direction:column;gap:6px;margin-top:10px}
+.step{opacity:0;transform:translateY(6px);transition:opacity .3s,transform .3s;font-family:var(--display);font-size:1.35rem}
+.step.show{opacity:1;transform:none}
+.step b{color:var(--accent)}
+.buckets{display:grid;grid-template-columns:repeat(auto-fit,minmax(150px,1fr));gap:10px;margin-top:12px}
+.bucket{border:2px dashed var(--line);border-radius:14px;padding:10px;min-height:70px}
+.bucket .label{margin-bottom:4px}
+.bucket .expr{font-size:1.4rem;min-height:36px}
+.bucket.ok{border-style:solid;border-color:var(--good)}
+.power{display:flex;align-items:center;gap:12px;flex-wrap:wrap}
+.power .expr{font-size:2.2rem}
+.big{font-family:var(--display);font-size:2.4rem}
+sup{font-size:.6em}
+.msg{margin-top:10px;font-weight:700;min-height:28px}
+.msg.good{color:var(--good)}.msg.bad{color:var(--bad)}
+.pick{display:flex;flex-wrap:wrap;gap:8px;margin-top:10px}
+.pick .btn{min-width:56px}
+.nav{display:flex;justify-content:space-between;gap:10px;margin-top:10px}
+.arrowbox{position:relative;display:inline-block}
+.arrow{position:absolute;left:0;top:100%;height:18px;width:100%;overflow:visible;pointer-events:none}
+.arrow path{fill:none;stroke:var(--accent);stroke-width:3;stroke-dasharray:200;stroke-dashoffset:200;transition:stroke-dashoffset .5s}
+.arrow.go path{stroke-dashoffset:0}
+.tick{font-family:var(--display);font-size:1.2rem;color:var(--good)}
+@media (prefers-reduced-motion:reduce){*{transition:none!important}}
+@media (max-width:480px){body{font-size:16px}.expr{font-size:1.5rem}.big{font-size:2rem}}
+</style>
+</head>
+<body>
+<div class="wrap">
+<h1>Algebra Playground</h1>
+<p class="sub">Four skills, one at a time. Tap things, watch what happens.</p>
+
+<div class="rail" id="rail">
+  <button class="chip" data-go="0" aria-current="true">Start here</button>
+  <button class="chip" data-go="1">1 · Collecting</button>
+  <button class="chip" data-go="2">2 · Multiplying</button>
+  <button class="chip" data-go="3">3 · Expanding</button>
+  <button class="chip" data-go="4">4 · Factorising</button>
+</div>
+
+<!-- 0 INTRO -->
+<section class="lesson on" id="L0">
+  <h2>What do the letters mean?</h2>
+  <p>A letter is just a number we don't know yet. So 3x means 3 lots of x, or 3 × x. We never bother writing the × between a number and a letter.</p>
+  <div class="card">
+    <div class="label">Tap each term to see its sign</div>
+    <p>The sign in front of a term belongs to it. Tap every piece of this expression.</p>
+    <div class="expr" id="introExpr"></div>
+    <div class="msg" id="introMsg"></div>
+  </div>
+  <div class="card sun">
+    <div class="label">Three words you'll see</div>
+    <p><b>Term:</b> one piece of an expression. 4x, 7y and −2 are the terms in 4x + 7y − 2.</p>
+    <p><b>Coefficient:</b> the number in front of the letter. In 4x it's 4. A letter on its own, like y, is really 1y.</p>
+    <p><b>Power:</b> the small number up top. x³ means x × x × x. A letter on its own is x¹.</p>
+  </div>
+  <div class="nav"><span></span><button class="btn" data-go="1">Lesson 1 →</button></div>
+</section>
+
+<!-- 1 COLLECTING -->
+<section class="lesson" id="L1">
+  <h2>Collecting like terms</h2>
+  <p>You can only add or subtract terms that are alike. Think of x as apples and y as bananas. 3 apples + 2 apples = 5 apples, but 3 apples + 2 bananas just stays as it is.</p>
+  <div class="card">
+    <div class="label">Sort the terms, then collect</div>
+    <p>Tap a term to send it to its bucket. Letters go together, plain numbers go together. The sign travels with it.</p>
+    <div class="expr" id="sortExpr"></div>
+    <div class="buckets" id="buckets"></div>
+    <div class="row">
+      <button class="btn" id="collectBtn" disabled>Collect them</button>
+      <button class="btn alt" id="sortNext">Another one</button>
+    </div>
+    <div class="result" id="sortResult"></div>
+  </div>
+  <div class="card sun">
+    <div class="label">Two traps</div>
+    <p>x² and x are <b>not</b> like terms. Keep them apart, like apples and apple pies.</p>
+    <p>Adding doesn't change the power. d² + d² = 2d², not 2d⁴. You've got two of the same thing, that's all.</p>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="0">← Back</button><button class="btn" data-go="2">Lesson 2 →</button></div>
+</section>
+
+<!-- 2 MULTIPLYING -->
+<section class="lesson" id="L2">
+  <h2>Multiplying and dividing</h2>
+  <p>Now the letters don't have to match. Anything can be multiplied by anything. Do the numbers, then do the letters.</p>
+  <div class="card">
+    <div class="label">Build a power</div>
+    <p>Each tap multiplies by another x. Watch the little number count them.</p>
+    <div class="power">
+      <div class="expr" id="powChain">x</div>
+      <div class="big">= <span id="powOut">x</span></div>
+    </div>
+    <div class="row"><button class="btn" id="powAdd">× x</button><button class="btn alt" id="powReset">Reset</button></div>
+  </div>
+  <div class="card">
+    <div class="label">Multiply two powers</div>
+    <p>When the letter is the same, the powers <b>add</b>. Tap the buttons to change them.</p>
+    <div class="power">
+      <div class="big"><span id="mA">3</span>x<sup id="pA">2</sup> × <span id="mB">5</span>x<sup id="pB">3</sup> = <span id="mulOut"></span></div>
+    </div>
+    <div class="row">
+      <button class="btn alt" data-p="A" data-d="-1">first power −</button><button class="btn alt" data-p="A" data-d="1">first power +</button>
+      <button class="btn alt" data-p="B" data-d="-1">second power −</button><button class="btn alt" data-p="B" data-d="1">second power +</button>
+    </div>
+    <div class="steps" id="mulSteps"></div>
+  </div>
+  <div class="card">
+    <div class="label">Divide two powers</div>
+    <p>When you divide, the powers <b>subtract</b>. Numbers divide as normal.</p>
+    <div class="big">8y<sup>4</sup> ÷ 2y<sup>2</sup> = <span id="divOut">?</span></div>
+    <div class="row"><button class="btn" id="divBtn">Show me</button></div>
+    <div class="steps" id="divSteps"></div>
+  </div>
+  <div class="card sun">
+    <div class="label">The one line to remember</div>
+    <p><b>Adding</b> like terms: the power stays the same.<br><b>Multiplying</b> them: the powers add up.</p>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="1">← Back</button><button class="btn" data-go="3">Lesson 3 →</button></div>
+</section>
+
+<!-- 3 EXPANDING -->
+<section class="lesson" id="L3">
+  <h2>Expanding brackets</h2>
+  <p>"Expand" and "multiply out" mean the same thing. The number outside the bracket multiplies <b>everything</b> inside, one term at a time.</p>
+  <div class="card">
+    <div class="label">Watch the number jump in</div>
+    <div class="expr" id="expExpr"></div>
+    <div class="steps" id="expSteps"></div>
+    <div class="row">
+      <button class="btn" id="expGo">Next step</button>
+      <button class="btn alt" id="expPick">Different one</button>
+    </div>
+  </div>
+  <div class="card sun">
+    <div class="label">The minus trap</div>
+    <p>If there's a minus in front of the bracket, it multiplies everything inside too. Minus × minus = plus. So 18 − 5(2t − 6) gives −10t <b>+ 30</b>, not − 30. Highlight both minus signs before you start.</p>
+    <p>No number in front? 10 − (3w + 4) means −1 lots of the bracket: 10 − 3w − 4.</p>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="2">← Back</button><button class="btn" data-go="4">Lesson 4 →</button></div>
+</section>
+
+<!-- 4 FACTORISING -->
+<section class="lesson" id="L4">
+  <h2>Factorising</h2>
+  <p>This is expanding in reverse. Find the <b>biggest</b> number that goes into every term, put it outside, and divide each term by it to fill the bracket.</p>
+  <div class="card">
+    <div class="label">Find the biggest factor</div>
+    <div class="expr" id="facExpr"></div>
+    <p>Which is the biggest number that goes into both?</p>
+    <div class="pick" id="facPick"></div>
+    <div class="msg" id="facMsg"></div>
+    <div class="result" id="facResult"></div>
+    <div class="row"><button class="btn alt" id="facNext">Another one</button></div>
+  </div>
+  <div class="card sun">
+    <div class="label">Check it</div>
+    <p>Expand your answer back out. If you get the original, it's right. And if the bits inside the bracket still share a number, you haven't gone big enough.</p>
+    <p>Don't lose the 1: 9y + 3 = 3(3y + 1). A bracket can't be empty.</p>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="3">← Back</button><button class="btn warm" data-go="0">Start again</button></div>
+</section>
+</div>
+
+<script>
+(function(){
+  var $=function(s){return document.querySelector(s)};
+  var fmt=function(c,v,p){ // coefficient, variable, power -> display string
+    var s=''; var a=Math.abs(c);
+    if(!v) return (c<0?'−':'')+a;
+    if(a!==1) s+=a; s+=v; if(p&&p>1) s+=sup(p);
+    return (c<0?'−':'')+s;
+  };
+  var sup=function(n){return '<sup>'+n+'</sup>'};
+  var signed=function(c,v,p,first){ var t=fmt(Math.abs(c),v,p); return (first?(c<0?'−':''):(c<0?'− ':'+ '))+t; };
+  var gcd=function(a,b){a=Math.abs(a);b=Math.abs(b);while(b){var t=b;b=a%b;a=t}return a};
+
+  // navigation
+  function go(n){
+    document.querySelectorAll('.lesson').forEach(function(l,i){l.classList.toggle('on',i===n)});
+    document.querySelectorAll('.chip').forEach(function(c){c.setAttribute('aria-current',c.dataset.go==n?'true':'false')});
+    window.scrollTo({top:0,behavior:'smooth'});
+  }
+  document.addEventListener('click',function(e){var b=e.target.closest('[data-go]');if(b)go(+b.dataset.go)});
+
+  // 0 intro: tap terms
+  (function(){
+    var terms=[[8,'u'],[-9,''],[-6,'u'],[15,'']];
+    var box=$('#introExpr'),hit=0;
+    terms.forEach(function(t,i){
+      var el=document.createElement('span');el.className='term';el.tabIndex=0;
+      el.innerHTML=signed(t[0],t[1],1,i===0);
+      el.onclick=function(){ if(el.classList.contains('hl'))return; el.classList.add('hl');
+        el.innerHTML=(t[0]<0?'−':'+')+fmt(Math.abs(t[0]),t[1],1); hit++;
+        $('#introMsg').textContent=hit<terms.length?'That term is '+(t[0]<0?'negative':'positive')+'. '+(terms.length-hit)+' to go.':'All four. Reading them with their signs is the whole trick.';
+        $('#introMsg').className='msg good';};
+      box.appendChild(el);
+    });
+  })();
+
+  // 1 collecting: sort into buckets
+  (function(){
+    var sets=[
+      [[8,'u'],[-9,''],[-6,'u'],[15,'']],
+      [[3,'x'],[-4,'y'],[2,'x'],[6,'y']],
+      [[7,'a'],[-3,'b'],[2,'a'],[5,'b']],
+      [[5,'x'],[-2,'y'],[-1,'x'],[3,'y']],
+      [[2,'c',2],[-3,'c',1],[5,'c',2],[7,'c',1]]
+    ];
+    var idx=0,placed;
+    function key(t){return (t[1]||'num')+(t[2]||1)}
+    function load(){
+      var set=sets[idx]; placed=0; $('#sortResult').textContent=''; $('#collectBtn').disabled=true;
+      var box=$('#sortExpr');box.innerHTML='';
+      var fams=[];set.forEach(function(t){var k=key(t);if(fams.indexOf(k)<0)fams.push(k)});
+      var bk=$('#buckets');bk.innerHTML='';
+      fams.forEach(function(k){var d=document.createElement('div');d.className='bucket';d.dataset.k=k;
+        d.innerHTML='<div class="label">'+(k.indexOf('num')===0?'just numbers':k.replace(/(\w)(\d)/,function(m,v,p){return p>1?v+'<sup>'+p+'</sup>':v})+' terms')+'</div><div class="expr"></div>';bk.appendChild(d)});
+      set.forEach(function(t,i){
+        var el=document.createElement('span');el.className='term';el.tabIndex=0;el.innerHTML=signed(t[0],t[1],t[2],i===0);
+        var fi=fams.indexOf(key(t));el.classList.add('fam-'+'abc'[fi]);
+        el.onclick=function(){ if(el.classList.contains('off'))return; el.classList.add('off');
+          var tgt=bk.querySelector('[data-k="'+key(t)+'"] .expr');var c=el.cloneNode(true);c.classList.remove('off');c.onclick=null;
+          c.innerHTML=(t[0]<0?'− ':'+ ')+fmt(Math.abs(t[0]),t[1],t[2]);tgt.appendChild(c);
+          placed++; if(placed===set.length){$('#collectBtn').disabled=false;bk.querySelectorAll('.bucket').forEach(function(b){b.classList.add('ok')})}};
+        box.appendChild(el);
+      });
+    }
+    $('#collectBtn').onclick=function(){
+      var set=sets[idx],out=[];
+      var fams=[];set.forEach(function(t){var k=key(t);if(fams.indexOf(k)<0)fams.push(k)});
+      fams.forEach(function(k){var sum=0,v='',p=1;set.forEach(function(t){if(key(t)===k){sum+=t[0];v=t[1];p=t[2]||1}});if(sum!==0)out.push([sum,v,p])});
+      $('#sortResult').innerHTML='= '+out.map(function(t,i){return signed(t[0],t[1],t[2],i===0)}).join(' ');
+    };
+    $('#sortNext').onclick=function(){idx=(idx+1)%sets.length;load()};
+    load();
+  })();
+
+  // 2 multiplying
+  (function(){
+    var n=1;
+    function draw(){$('#powChain').textContent=Array(n).fill('x').join(' × ');$('#powOut').innerHTML='x'+(n>1?sup(n):'')}
+    $('#powAdd').onclick=function(){if(n<8)n++;draw()};$('#powReset').onclick=function(){n=1;draw()};draw();
+
+    var pa=2,pb=3;
+    function mul(){
+      $('#pA').textContent=pa;$('#pB').textContent=pb;
+      $('#mulOut').innerHTML='15x'+sup(pa+pb);
+      $('#mulSteps').innerHTML='<div class="step show">Numbers: 3 × 5 = <b>15</b></div><div class="step show">Letters: x'+sup(pa)+' × x'+sup(pb)+' = x<sup>'+pa+'+'+pb+'</sup> = <b>x'+sup(pa+pb)+'</b></div>';
+    }
+    document.querySelectorAll('[data-p]').forEach(function(b){b.onclick=function(){
+      if(b.dataset.p==='A')pa=Math.min(6,Math.max(1,pa+ +b.dataset.d));else pb=Math.min(6,Math.max(1,pb+ +b.dataset.d));mul()}});
+    mul();
+
+    $('#divBtn').onclick=function(){
+      $('#divOut').innerHTML='4y'+sup(2);
+      var s=$('#divSteps');s.innerHTML='<div class="step">Numbers: 8 ÷ 2 = <b>4</b></div><div class="step">Letters: y⁴ ÷ y² = y<sup>4−2</sup> = <b>y²</b></div><div class="step">Put them together: <b>4y²</b></div>';
+      s.querySelectorAll('.step').forEach(function(st,i){setTimeout(function(){st.classList.add('show')},i*450)});
+    };
+  })();
+
+  // 3 expanding
+  (function(){
+    var qs=[
+      {k:4,a:[2,'x'],b:[-3,''],extra:null},
+      {k:3,a:[5,'t'],b:[-7,''],extra:[4,'']},
+      {k:-5,pre:[18,''],a:[2,'t'],b:[-6,'']},
+      {k:2,a:[3,'x'],b:[5,''],extra:null},
+      {k:-3,pre:[8,''],a:[2,''],b:[-3,'x']}
+    ];
+    var i=0,step=0;
+    function term(t,first){return signed(t[0],t[1],1,first)}
+    function show(){
+      var q=qs[i];step=0;$('#expSteps').innerHTML='';
+      var s='';
+      if(q.pre)s+=term(q.pre,true)+' ';
+      s+='<span class="term hl" id="kk">'+(q.pre?(q.k<0?'− ':'+ ')+Math.abs(q.k):q.k)+'</span>(<span class="term" id="ta">'+term(q.a,true)+'</span> <span class="term" id="tb">'+term(q.b,false)+'</span>)';
+      if(q.extra)s+=' '+term(q.extra,false);
+      $('#expExpr').innerHTML=s;$('#expGo').textContent='Next step';$('#expGo').disabled=false;
+    }
+    $('#expGo').onclick=function(){
+      var q=qs[i],st=$('#expSteps');
+      var r1=[q.k*q.a[0],q.a[1]],r2=[q.k*q.b[0],q.b[1]];
+      var line;
+      if(step===0){$('#ta').classList.add('fam-a');line=Math.abs(q.k)+' × '+fmt(Math.abs(q.a[0]),q.a[1],1)+(q.k<0||q.a[0]<0?' (watch the signs)':'')+' = <b>'+term(r1,true)+'</b>'}
+      else if(step===1){$('#tb').classList.add('fam-b');line=(q.k<0?'−':'')+Math.abs(q.k)+' × '+term(q.b,true)+' = <b>'+term(r2,true)+'</b>'+(q.k<0&&q.b[0]<0?' &nbsp;← minus × minus = plus':'')}
+      else if(step===2){var parts=[];if(q.pre)parts.push(q.pre);parts.push(r1,r2);if(q.extra)parts.push(q.extra);
+        line='Write it all out: '+parts.map(function(t,j){return term(t,j===0)}).join(' ')}
+      else{var all=[];if(q.pre)all.push(q.pre);all.push(r1,r2);if(q.extra)all.push(q.extra);
+        var num=0,lets={};all.forEach(function(t){if(t[1])lets[t[1]]=(lets[t[1]]||0)+t[0];else num+=t[0]});
+        var out=[];Object.keys(lets).forEach(function(v){if(lets[v])out.push([lets[v],v])});if(num)out.push([num,'']);
+        line='Collect like terms: <b>'+out.map(function(t,j){return term(t,j===0)}).join(' ')+'</b>';$('#expGo').disabled=true;$('#expGo').textContent='Done'}
+      var d=document.createElement('div');d.className='step';d.innerHTML=line;st.appendChild(d);requestAnimationFrame(function(){d.classList.add('show')});step++;
+    };
+    $('#expPick').onclick=function(){i=(i+1)%qs.length;show()};show();
+  })();
+
+  // 4 factorising
+  (function(){
+    var qs=[[20,'a',-16,'b'],[9,'y',3,''],[14,'',-21,'x'],[35,'',15,'x'],[48,'y',-84,''],[12,'x',-30,''],[18,'x',-12,''],[24,'y',-6,'']];
+    var i=0;
+    function load(){
+      var q=qs[i],g=gcd(q[0],q[2]);
+      $('#facExpr').innerHTML=signed(q[0],q[1],1,true)+' '+signed(q[2],q[3],1,false);
+      $('#facMsg').textContent='';$('#facMsg').className='msg';$('#facResult').textContent='';
+      var opts=[];for(var d=2;d<=Math.max(Math.abs(q[0]),Math.abs(q[2]));d++){if(q[0]%d===0||q[2]%d===0)opts.push(d)}
+      opts=opts.filter(function(d){return d===g||opts.indexOf(d)%2===0}).slice(0,8);if(opts.indexOf(g)<0)opts.push(g);opts.sort(function(a,b){return a-b});
+      var p=$('#facPick');p.innerHTML='';
+      opts.forEach(function(d){var b=document.createElement('button');b.className='btn alt';b.textContent=d;b.onclick=function(){
+        var m=$('#facMsg');
+        if(d===g){m.textContent='Yes. '+g+' is the biggest number that goes into both.';m.className='msg good';
+          $('#facResult').innerHTML='= '+g+'('+signed(q[0]/g,q[1],1,true)+' '+signed(q[2]/g,q[3],1,false)+')';}
+        else if(q[0]%d===0&&q[2]%d===0){m.textContent=d+' goes into both, but you can go bigger. Try again.';m.className='msg bad'}
+        else{m.textContent=d+' doesn’t go into '+(q[0]%d?Math.abs(q[0]):Math.abs(q[2]))+'. It has to divide every term.';m.className='msg bad'}
+      };p.appendChild(b)});
+    }
+    $('#facNext').onclick=function(){i=(i+1)%qs.length;load()};load();
+  })();
+})();
+</script>
+</body>
+</html>
