@@ -83,6 +83,10 @@ sup{font-size:.6em}
 </style>
 </head>
 <body>
+<form name="progress" method="POST" data-netlify="true" netlify-honeypot="bot-field" hidden>
+  <input type="hidden" name="form-name" value="progress">
+  <input name="bot-field"><input name="session"><input name="when"><input name="lesson"><input name="event"><input name="detail"><input name="result">
+</form>
 <div class="wrap">
 <h1>Algebra Playground</h1>
 <p class="sub">Four skills, one at a time. Tap things, watch what happens.</p>
@@ -93,6 +97,7 @@ sup{font-size:.6em}
   <button class="chip" data-go="2">2 · Multiplying</button>
   <button class="chip" data-go="3">3 · Expanding</button>
   <button class="chip" data-go="4">4 · Factorising</button>
+  <button class="chip" data-go="5">My progress</button>
 </div>
 
 <!-- 0 INTRO -->
@@ -216,6 +221,17 @@ sup{font-size:.6em}
     <p>Don't lose the 1: 9y + 3 = 3(3y + 1). A bracket can't be empty.</p>
   </div>
   <div class="nav"><button class="btn alt" data-go="3">← Back</button><button class="btn warm" data-go="0">Start again</button></div>
+</section>
+
+<!-- 5 PROGRESS -->
+<section class="lesson" id="L5">
+  <h2>My progress</h2>
+  <p>This is what you've done on this iPad so far.</p>
+  <div class="card"><div class="label">So far</div><div id="progText"></div>
+    <div class="row"><button class="btn" id="progCopy">Copy for Mum</button><button class="btn alt" id="progRefresh">Refresh</button></div>
+    <div class="msg good" id="progMsg"></div>
+  </div>
+  <div class="nav"><button class="btn alt" data-go="0">← Start</button><span></span></div>
 </section>
 </div>
 
@@ -373,6 +389,57 @@ sup{font-size:.6em}
     }
     $('#facNext').onclick=function(){i=(i+1)%qs.length;load()};load();
   })();
+})();
+</script>
+
+<script>
+(function(){
+  var $=function(q){return document.querySelector(q)};
+  var sid; try{sid=sessionStorage.getItem('ap_sid');if(!sid){sid=Math.random().toString(36).slice(2,8);sessionStorage.setItem('ap_sid',sid)}}catch(e){sid='na'}
+  var P; try{P=JSON.parse(localStorage.getItem('ap_progress')||'{}')}catch(e){P={}}
+  P.collect=P.collect||0;P.expand=P.expand||0;P.divide=P.divide||0;P.intro=P.intro||false;
+  P.fRight=P.fRight||0;P.fSmall=P.fSmall||0;P.fWrong=P.fWrong||0;P.mins=P.mins||0;P.opened=P.opened||{};P.days=P.days||[];
+  var last=Date.now();
+  function save(){try{localStorage.setItem('ap_progress',JSON.stringify(P))}catch(e){}}
+  function tick(){var n=Date.now();if(n-last<120000)P.mins+=(n-last)/60000;last=n;var d=new Date().toISOString().slice(0,10);if(P.days.indexOf(d)<0)P.days.push(d);P.last=new Date().toLocaleString('en-GB');save()}
+  function send(lesson,event,detail,result){
+    var body=new URLSearchParams({'form-name':'progress',session:sid,when:new Date().toISOString(),lesson:lesson,event:event,detail:detail||'',result:result||''}).toString();
+    try{fetch('/',{method:'POST',headers:{'Content-Type':'application/x-www-form-urlencoded'},body:body}).catch(function(){})}catch(e){}
+  }
+  function lessonName(n){return ['start','collecting','multiplying','expanding','factorising','progress'][n]||n}
+  function currentLesson(){var on=document.querySelector('.lesson.on');return on?+on.id.slice(1):0}
+
+  document.addEventListener('click',function(e){
+    var t=e.target; tick();
+    var g=t.closest('[data-go]'); if(g){var n=+g.dataset.go;P.opened[n]=(P.opened[n]||0)+1;save();send(lessonName(n),'open','','');if(n===5)render();return}
+    if(t.closest('#introExpr .term')){setTimeout(function(){if(/All four/.test($('#introMsg').textContent)&&!P.intro){P.intro=true;save();send('start','intro_done','','done')}},0);return}
+    if(t.id==='collectBtn'){setTimeout(function(){P.collect++;save();send('collecting','collect',$('#sortExpr').textContent.trim(),$('#sortResult').textContent.trim())},0);return}
+    if(t.id==='divBtn'){P.divide++;save();send('multiplying','divide_shown','8y^4 / 2y^2','');return}
+    if(t.id==='expGo'){setTimeout(function(){if(t.textContent==='Done'){P.expand++;save();var st=$('#expSteps');send('expanding','expand_done',$('#expExpr').textContent.trim(),st.lastElementChild?st.lastElementChild.textContent.trim():'')}},0);return}
+    if(t.closest('#facPick .btn')){var chosen=t.textContent;setTimeout(function(){var m=$('#facMsg');var r=m.classList.contains('good')?'right':(/go bigger/.test(m.textContent)?'too_small':'not_a_factor');
+      if(r==='right')P.fRight++;else if(r==='too_small')P.fSmall++;else P.fWrong++;save();send('factorising','factor_attempt',$('#facExpr').textContent.trim()+' chose '+chosen,r)},0);return}
+  });
+
+  function text(){
+    var tot=P.fRight+P.fSmall+P.fWrong;
+    var lines=[
+      'Algebra Playground progress',
+      'Time on it: about '+Math.round(P.mins)+' min over '+P.days.length+' day'+(P.days.length===1?'':'s')+(P.last?' (last used '+P.last+')':''),
+      'Start here: '+(P.intro?'done':'not finished'),
+      'Collecting: '+P.collect+' expression'+(P.collect===1?'':'s')+' sorted and collected',
+      'Multiplying: divide example shown '+P.divide+' time'+(P.divide===1?'':'s'),
+      'Expanding: '+P.expand+' bracket'+(P.expand===1?'':'s')+' expanded to the end',
+      'Factorising: '+P.fRight+' right out of '+tot+' tries'+(tot?' ('+P.fSmall+' picked a factor that was too small, '+P.fWrong+' picked a number that didn\u2019t divide both)':'')
+    ];
+    return lines.join('\n');
+  }
+  function render(){var el=$('#progText');if(el)el.innerHTML=text().split('\n').map(function(l,i){return i?'<p>'+l+'</p>':''}).join('')}
+  $('#progRefresh').onclick=render;
+  $('#progCopy').onclick=function(){var tx=text();var m=$('#progMsg');
+    function fb(){var ta=document.createElement('textarea');ta.value=tx;document.body.appendChild(ta);ta.select();try{document.execCommand('copy');m.textContent='Copied. Paste it into a message to Mum.'}catch(e){m.textContent='Select the text above and copy it.'}document.body.removeChild(ta)}
+    if(navigator.clipboard&&navigator.clipboard.writeText){navigator.clipboard.writeText(tx).then(function(){m.textContent='Copied. Paste it into a message to Mum.'},fb)}else fb()};
+  document.addEventListener('visibilitychange',function(){if(document.hidden)tick();else last=Date.now()});
+  render(); send('start','page_open','','');
 })();
 </script>
 </body>
